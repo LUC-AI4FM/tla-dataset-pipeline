@@ -90,10 +90,10 @@ def validate_manifest(args: argparse.Namespace) -> int:
     success, errors = validate_jsonl(str(manifest_path), str(schema_path))
 
     if success:
-        print("✓ Validation passed!")
+        print("Validation passed!")
         return 0
     else:
-        print(f"✗ Validation failed with {len(errors)} error(s):\n")
+        print(f"Validation failed with {len(errors)} error(s):\n")
         if args.verbose or len(errors) <= 10:
             for error in errors:
                 print(f"  {error}")
