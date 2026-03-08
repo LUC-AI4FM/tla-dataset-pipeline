@@ -96,6 +96,9 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 ignore_missing_imports = false
 implicit_reexport = true
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = "$MYPY_CONFIG_FILE_DIR/src"
 
 [[tool.mypy.overrides]]
 module = "tladata.*"

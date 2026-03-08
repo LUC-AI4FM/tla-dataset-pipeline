@@ -36,4 +36,4 @@ jobs:
         with:
           python-version: '3.14'
       - run: pip install -e .[dev]
-      - run: mypy src/
+      - run: mypy src/tladata
