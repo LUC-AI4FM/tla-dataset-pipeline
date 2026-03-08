@@ -5,6 +5,7 @@ import os
 import sys
 from pathlib import Path
 
+from tladata import __version__
 from tladata.contracts.validate import validate_jsonl
 from tladata.discovery.github_client import GithubClient
 from tladata.discovery.pipeline import (
@@ -119,6 +120,11 @@ def main_discover() -> int:
 
     # Global arguments
     parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
+    parser.add_argument(
         "--output",
         default="manifests/sources/sources_latest.jsonl",
         help="Output path for JSONL manifest (default: manifests/sources/sources_latest.jsonl)",
@@ -183,6 +189,11 @@ def main_validate() -> int:
     """Main entry point for manifest validation."""
     parser = argparse.ArgumentParser(
         description="Validate a JSONL manifest file against a JSON schema"
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
     parser.add_argument(
         "manifest",
