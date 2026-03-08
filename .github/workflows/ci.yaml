@@ -26,3 +26,14 @@ jobs:
         with:
           src: './src'
           options: '--check'
+
+  mypy-type-check:
+    runs-on: ubuntu-latest
+    name: MyPy Type Checking
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.14'
+      - run: pip install -e .[dev]
+      - run: mypy src/
