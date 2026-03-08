@@ -1,19 +1,20 @@
-from typing import Any, Dict, List, cast
 from datetime import datetime, timezone
+from typing import Any, cast
+
 from tladata.discovery.github_client import GithubClient
 
 """This module contains functions for searching GitHub repositories and fetching their metadata using the GitHub API."""
 
 def search_repositories(
     client: GithubClient, query: str, per_page: int = 50
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
 
-    params: Dict[str, Any] = {"q": query, "per_page": per_page}
+    params: dict[str, Any] = {"q": query, "per_page": per_page}
     data = client.get("/search/repositories", params=params)
-    return cast(List[Dict[str, Any]], data.get("items", []))
+    return cast(list[dict[str, Any]], data.get("items", []))
 
 
-def fetch_repo_metadata(client: GithubClient, full_name: str, source: str) -> Dict[str, Any]:
+def fetch_repo_metadata(client: GithubClient, full_name: str, source: str) -> dict[str, Any]:
 
     repo = client.get(f"/repos/{full_name}")
     default_branch = repo["default_branch"]
