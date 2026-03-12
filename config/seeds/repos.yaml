@@ -1,0 +1,32 @@
+---
+orgs:
+  - tlaplus
+  - Azure
+  - pingcap
+  - microsoft
+  - apalache-mc
+  - atomix
+  - tendermint
+
+repos:
+  - tlaplus/tlaplus
+  - tlaplus/Examples
+  - tlaplus/DrTLAPlus
+  - tlaplus/CommunityModules
+  - tlaplus/ValidationTestSuite
+  - Azure/azure-cosmos-tla
+  - pingcap/tla-plus
+  - microsoft/CCF
+  - apalache-mc/apalache
+  - atomix/atomix-tlaplus
+  - tendermint/spec
+users:
+  - quux00
+  - muratdem
+  - FredericoPonzi
+  - mryndzionek
+  - dranov
+  - afonsonf
+  - kuujo
+  - ongardie
+  - konnov

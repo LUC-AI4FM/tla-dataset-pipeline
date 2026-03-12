@@ -1,0 +1,7 @@
+---
+queries:
+  - "extension:tla"
+  - "extension:cfg tla"
+  - '"\\* PlusCal" extension:tla'
+  - '"EXTENDS" "VARIABLES" extension:tla'
+  - "TLAPS extension:tla"
