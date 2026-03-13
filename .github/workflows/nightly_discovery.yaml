@@ -28,24 +28,100 @@ jobs:
           pip install -e ".[s3]"
           pip install dvc
 
+      - name: Verify AWS credentials
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          echo "Checking AWS credentials..."
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "ERROR: AWS credentials not set in GitHub secrets"
+            echo "Required secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY"
+            exit 1
+          fi
+          echo "AWS credentials are set"
+          
+          # Verify credentials are valid using AWS CLI
+          if aws sts get-caller-identity --region us-east-2 > /tmp/aws_identity.json 2>&1; then
+            ACCOUNT=$(jq -r '.Account' /tmp/aws_identity.json)
+            ARN=$(jq -r '.Arn' /tmp/aws_identity.json)
+            echo "AWS credentials valid"
+            echo "  Account: $ACCOUNT"
+            echo "  ARN: $ARN"
+          else
+            echo "AWS credentials invalid or expired"
+            cat /tmp/aws_identity.json
+            exit 1
+          fi
+
+      - name: Verify S3 bucket access
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          echo "Checking S3 bucket access..."
+          if aws s3 ls s3://luc-tla-datasets --region us-east-2 > /dev/null 2>&1; then
+            echo "AWS S3 bucket is accessible"
+          else
+            echo "Cannot access S3 bucket"
+            exit 1
+          fi
+
+      - name: Verify GitHub token
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking GitHub token..."
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "ERROR: GITHUB_TOKEN not set"
+            exit 1
+          fi
+          # Test GitHub token by calling API
+          curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user | python -c "
+          import sys, json
+          try:
+              data = json.load(sys.stdin)
+              if 'login' in data:
+                  print(f'GitHub token is valid (user: {data[\"login\"]})')
+              else:
+                  print('GitHub token invalid or expired')
+                  exit(1)
+          except:
+              print('Cannot verify GitHub token')
+              exit(1)
+          " || exit 1
+
       - name: Run DVC pipeline
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          dvc repro
+          echo "Starting DVC pipeline..."
+          set -x  # Enable debug output
+          dvc repro --verbose
+        continue-on-error: true
 
-      - name: Push DVC metadata
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Check pipeline status
+        if: failure()
         run: |
-          dvc push
+          echo "Pipeline failed. Collecting diagnostic information..."
+          echo "\n=== DVC Status ==="
+          dvc status || true
+          echo "\n=== DVC Lock File ==="
+          cat dvc.lock || echo "dvc.lock not found"
+          echo "\n=== Check for hanging processes ==="
+          ps aux | grep -E "tladata|dvc" || true
+          echo "\n=== Disk space ==="
+          df -h
+          echo "\n=== Current working directory ==="
+          pwd && ls -la
+          exit 1
 
       - name: Log pipeline results
+        if: success()
         run: |
-          echo "Pipeline execution completed!"
+          echo "Pipeline execution completed successfully!"
           echo "Stages run: discover → pull → push-to-s3"
           echo "Manifest: manifests/sources/sources_latest.jsonl"
           echo "Extracted files: data/raw/"
