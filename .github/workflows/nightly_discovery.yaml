@@ -36,26 +36,7 @@ jobs:
         run: |
           dvc repro
 
-      - name: Check for manifest changes
-        id: check_changes
-        run: |
-          if git diff --quiet manifests/sources/sources_latest.jsonl; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Commit manifest changes
-        if: steps.check_changes.outputs.has_changes == 'true'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add manifests/sources/sources_latest.jsonl manifests/sources/sources_latest_formatted.jsonl
-          git commit -m "chore: update TLA+ dataset manifest [nightly pipeline]"
-          git push
-
       - name: Push DVC metadata
-        if: steps.check_changes.outputs.has_changes == 'true'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
