@@ -67,30 +67,6 @@ jobs:
             exit 1
           fi
 
-      - name: Verify GitHub token
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Checking GitHub token..."
-          if [ -z "$GITHUB_TOKEN" ]; then
-            echo "ERROR: GITHUB_TOKEN not set"
-            exit 1
-          fi
-          # Test GitHub token by calling API
-          curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user | python -c "
-          import sys, json
-          try:
-              data = json.load(sys.stdin)
-              if 'login' in data:
-                  print(f'GitHub token is valid (user: {data[\"login\"]})')
-              else:
-                  print('GitHub token invalid or expired')
-                  exit(1)
-          except:
-              print('Cannot verify GitHub token')
-              exit(1)
-          " || exit 1
-
       - name: Run DVC pipeline
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
