@@ -1,0 +1,23 @@
+stages:
+  discover:
+    cmd: tladata discover
+    deps:
+      - config/seeds/repos.yaml
+      - config/seeds/queries.yaml
+      - src/tladata/discovery
+    outs:
+      - manifests/sources/sources_latest.jsonl
+      - manifests/sources/sources_latest_formatted.jsonl
+
+  pull:
+    cmd: tladata pull
+    deps:
+      - manifests/sources/sources_latest.jsonl
+      - src/tladata/extraction
+    outs:
+      - data/raw
+
+  push-to-s3:
+    cmd: tladata push-to-s3
+    deps:
+      - data/raw

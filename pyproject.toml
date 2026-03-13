@@ -43,6 +43,9 @@ dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
 ]
+s3 = [
+    "boto3>=1.26.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/LUC-FMitF/tla-dataset-pipeline"
@@ -53,7 +56,7 @@ Issues = "https://github.com/LUC-FMitF/tla-dataset-pipeline/issues"
 tladata = "tladata.cli:main_discover"
 
 [tool.setuptools]
-packages = ["tladata", "tladata.contracts", "tladata.discovery", "tladata.utils"]
+packages = ["tladata", "tladata.contracts", "tladata.discovery", "tladata.extraction", "tladata.utils"]
 package-dir = {"" = "src"}
 
 [tool.setuptools.package-data]
