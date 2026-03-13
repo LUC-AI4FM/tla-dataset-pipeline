@@ -56,8 +56,8 @@ class FileExtractor:
                 files_after = self._count_files(output_path)
                 total_files += (files_after - files_before)
                 print(f"[{repos_processed}] Completed {repo} (extracted {files_after - files_before} files)")
-        
-        print(f"\n✓ Extraction complete: {total_files} files extracted from {repos_processed} repositories")
+
+        print(f"\n Extraction complete: {total_files} files extracted from {repos_processed} repositories")
 
     def _count_files(self, path: Path) -> int:
         """Count total files in directory tree."""
@@ -82,7 +82,7 @@ class FileExtractor:
     def _find_tla_files(self, repo: str, sha: str) -> Generator[str, None, None]:
         """Find all TLA+ files in repository at given commit."""
         url = f"/repos/{repo}/git/trees/{sha}?recursive=1"
-        
+
         print(f"  Querying GitHub API for tree structure of {repo}@{sha[:8]}...")
         try:
             # Use longer timeout for tree queries (they can be slow for large repos)
@@ -91,10 +91,10 @@ class FileExtractor:
             print(f"  Failed to query tree for {repo}: {e}")
             print(f"  Skipping {repo} (tree too large or API error)")
             return
-            
+
         tree_items = tree_data.get("tree", [])
         print(f"  Found {len(tree_items)} items in tree, filtering for TLA+ files...")
-        
+
         tla_count = 0
         for item in tree_items:
             if item["type"] == "blob":
@@ -102,9 +102,9 @@ class FileExtractor:
                 if any(path.endswith(ext) for ext in self.TLA_EXTENSIONS):
                     tla_count += 1
                     yield path
-        
+
         if tla_count == 0:
-            print(f"  No TLA+ files found")
+            print("  No TLA+ files found")
 
     def _download_file(self, repo: str, sha: str, file_path: str, dest_dir: Path) -> None:
         """Download a single file from repository."""
