@@ -1,0 +1,27 @@
+schema: '2.0'
+stages:
+  discover:
+    cmd: tladata discover
+    deps:
+    - path: config/seeds/queries.yaml
+      hash: md5
+      md5: 1bc4e352d75f4fc15c12d149fd9d5f46
+      size: 159
+    - path: config/seeds/repos.yaml
+      hash: md5
+      md5: 161812eea84c63e89f6f90b55c9448d4
+      size: 493
+    - path: src/tladata/discovery
+      hash: md5
+      md5: 575f148a87b617d0ca08020af9ffaa15.dir
+      size: 31304
+      nfiles: 9
+    outs:
+    - path: manifests/sources/sources_latest.jsonl
+      hash: md5
+      md5: 7d8a252289886dd201a04ff8c033f93e
+      size: 4439
+    - path: manifests/sources/sources_latest_formatted.jsonl
+      hash: md5
+      md5: df5f2a903b75fe7bbc8cbb17493449fe
+      size: 4823
