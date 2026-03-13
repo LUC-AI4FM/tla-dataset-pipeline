@@ -1,0 +1,52 @@
+# Runtime Configuration Limits for TLA+ Dataset Pipeline
+# These settings control API usage, timeouts, batch processing, and resource constraints
+
+github_api:
+  # Request timeout in seconds for GitHub API calls
+  request_timeout: 30
+  
+  # Number of items per page in paginated requests
+  per_page: 50
+  
+  # Maximum number of retries on transient failures
+  max_retries: 3
+  
+  # Retry delay in seconds (exponential backoff is applied)
+  retry_delay: 1
+
+discovery:
+  # Maximum number of repositories to fetch metadata for
+  max_repositories: 5000
+  
+  # Maximum results per search query
+  max_results_per_query: 100
+  
+  # Delay between API calls in seconds (to avoid hitting rate limits)
+  call_delay: 0.1
+
+extraction:
+  # Timeout for downloading a single file in seconds
+  file_download_timeout: 30
+  
+  # Maximum file size in bytes (default 10 MB)
+  max_file_size: 10485760
+  
+  # Maximum number of files to extract per repository
+  max_files_per_repo: 1000
+  
+  # Maximum number of concurrent repository extractions
+  max_concurrent_repos: 5
+
+upload:
+  # Maximum number of files to upload in a single batch
+  batch_size: 100
+  
+  # Timeout for S3 operations in seconds
+  s3_timeout: 60
+  
+  # Maximum number of concurrent uploads
+  max_concurrent_uploads: 10
+
+validation:
+  # Maximum number of validation errors to display
+  max_validation_errors: 50
