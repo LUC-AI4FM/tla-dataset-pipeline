@@ -1,0 +1,10 @@
+# DVC Configuration Template
+# Copy to .dvc/config and fill in your values
+
+[core]
+    remote = s3remote
+
+['remote "s3remote"']
+    # S3 bucket URL - use your own bucket name
+    url = s3://your-bucket-name/dvc/
+    region = us-east-2

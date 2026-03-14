@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import cast
 
 from tladata import __version__
+from tladata.config import load_env
 from tladata.contracts.validate import validate_jsonl
 from tladata.discovery.github_client import GithubClient
 from tladata.discovery.pipeline import (
@@ -171,6 +172,7 @@ def push_to_s3(args: argparse.Namespace) -> int:
 
 def main_discover() -> int:
     """Main entry point for discovery commands."""
+    load_env()  # Load .env file if it exists (local development only)
     parser = argparse.ArgumentParser(description="TLA Dataset Discovery Pipeline", prog="tladata")
 
     # Global arguments

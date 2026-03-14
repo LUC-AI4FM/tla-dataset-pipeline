@@ -28,6 +28,20 @@ jobs:
           pip install -e ".[s3]"
           pip install dvc
 
+      - name: Configure DVC
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+        run: |
+          cat > .dvc/config.local << EOF
+          [core]
+              remote = s3remote
+          ['remote "s3remote"']
+              url = s3://${S3_BUCKET}/dvc/
+              region = us-east-2
+          EOF
+          echo "DVC config.local created:"
+          cat .dvc/config.local
+
       - name: Verify AWS credentials
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -72,6 +86,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
         run: |
           echo "Starting DVC pipeline..."
           set -x  # Enable debug output
