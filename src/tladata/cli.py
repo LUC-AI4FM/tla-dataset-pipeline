@@ -168,8 +168,12 @@ def push_to_s3(args: argparse.Namespace) -> int:
             # Use separate bucket/prefix for manifests if specified
             manifest_bucket = args.manifest_bucket or bucket
             manifest_prefix = args.manifest_prefix or "manifests/sources"
-            manifest_uploader = S3Uploader(cast(str, manifest_bucket), cast(str, manifest_prefix), cast(str, region))
-            manifest_stats = manifest_uploader.upload_directory(str(manifest_dir), dry_run=args.dry_run)
+            manifest_uploader = S3Uploader(
+                cast(str, manifest_bucket), cast(str, manifest_prefix), cast(str, region)
+            )
+            manifest_stats = manifest_uploader.upload_directory(
+                str(manifest_dir), dry_run=args.dry_run
+            )
             # Combine statistics
             stats["total_files"] += manifest_stats["total_files"]
             stats["uploaded_files"] += manifest_stats["uploaded_files"]
