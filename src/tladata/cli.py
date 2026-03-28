@@ -161,11 +161,15 @@ def push_to_s3(args: argparse.Namespace) -> int:
         # Upload extracted files from data/raw
         stats = uploader.upload_directory(args.input, dry_run=args.dry_run)
 
-        # Also upload manifest files
+        # Also upload manifest files (possibly to different bucket/prefix)
         manifest_dir = Path("manifests/sources")
         if manifest_dir.exists():
             print("\nUploading manifests...")
-            manifest_stats = uploader.upload_directory(str(manifest_dir), dry_run=args.dry_run)
+            # Use separate bucket/prefix for manifests if specified
+            manifest_bucket = args.manifest_bucket or bucket
+            manifest_prefix = args.manifest_prefix or "manifests/sources"
+            manifest_uploader = S3Uploader(cast(str, manifest_bucket), cast(str, manifest_prefix), cast(str, region))
+            manifest_stats = manifest_uploader.upload_directory(str(manifest_dir), dry_run=args.dry_run)
             # Combine statistics
             stats["total_files"] += manifest_stats["total_files"]
             stats["uploaded_files"] += manifest_stats["uploaded_files"]
@@ -285,6 +289,14 @@ def main_discover() -> int:
         "--dry-run",
         action="store_true",
         help="Show what would be uploaded without actually uploading",
+    )
+    push_parser.add_argument(
+        "--manifest-bucket",
+        help="S3 bucket for manifest files (uses --bucket if not specified)",
+    )
+    push_parser.add_argument(
+        "--manifest-prefix",
+        help="S3 prefix/folder for manifests (default: manifests/sources)",
     )
 
     args = parser.parse_args()
