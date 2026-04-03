@@ -232,22 +232,6 @@ def update_manifest_with_s3(args: argparse.Namespace) -> int:
         return 1
 
 
-def transform_directory(args: argparse.Namespace) -> int:
-    """Transform all TLA+ files in a directory into feature-annotated JSON."""
-    try:
-        service = TlaTransformationService()
-        service.transform_from_directory(
-            args.input,
-            args.output_fine,
-            args.output_coarse,
-            recursive=args.recursive,
-        )
-        return 0
-    except Exception as e:
-        print(f"Error during transformation: {e}", file=sys.stderr)
-        return 1
-
-
 def transform_extracted_files(args: argparse.Namespace) -> int:
     """Transform extracted TLA+ files using extraction manifest (PRIMARY METHOD)."""
     try:
@@ -255,21 +239,6 @@ def transform_extracted_files(args: argparse.Namespace) -> int:
         service.transform_from_local_extraction(
             args.extraction_manifest,
             args.extracted_files_root,
-            args.output_fine,
-            args.output_coarse,
-        )
-        return 0
-    except Exception as e:
-        print(f"Error during transformation: {e}", file=sys.stderr)
-        return 1
-
-
-def transform_manifest(args: argparse.Namespace) -> int:
-    """Transform TLA+ specs from a manifest into feature-annotated JSON."""
-    try:
-        service = TlaTransformationService()
-        service.transform_from_manifest(
-            args.manifest,
             args.output_fine,
             args.output_coarse,
         )
@@ -387,33 +356,6 @@ def main_discover() -> int:
         help="S3 prefix/folder for manifests (default: manifests/sources)",
     )
 
-    # transform-directory
-    transform_dir_parser = subparsers.add_parser(
-        "transform-directory",
-        help="Transform all TLA+ files in a directory",
-    )
-    transform_dir_parser.add_argument(
-        "--input",
-        default="data/raw",
-        help="Input directory with TLA+ files (default: data/raw)",
-    )
-    transform_dir_parser.add_argument(
-        "--output-fine",
-        default="data/processed/tla-components-fine.json",
-        help="Output file for fine-grained features (default: data/processed/tla-components-fine.json)",
-    )
-    transform_dir_parser.add_argument(
-        "--output-coarse",
-        default="data/processed/tla-components-coarse.json",
-        help="Output file for coarse-grained features (default: data/processed/tla-components-coarse.json)",
-    )
-    transform_dir_parser.add_argument(
-        "--recursive",
-        action="store_true",
-        default=True,
-        help="Search recursively for .tla files (default: True)",
-    )
-
     # generate-manifest
     gen_manifest_parser = subparsers.add_parser(
         "generate-manifest",
@@ -488,27 +430,6 @@ def main_discover() -> int:
         help="Output file for coarse-grained features (default: data/processed/tla-components-coarse.json)",
     )
 
-    # transform-manifest (legacy)
-    transform_manifest_parser = subparsers.add_parser(
-        "transform-manifest",
-        help="Transform TLA+ specs from a custom manifest (LEGACY - use 'transform' instead)",
-    )
-    transform_manifest_parser.add_argument(
-        "--manifest",
-        default="manifests/sources/sources_latest.jsonl",
-        help="Path to JSONL manifest file (default: manifests/sources/sources_latest.jsonl)",
-    )
-    transform_manifest_parser.add_argument(
-        "--output-fine",
-        default="data/processed/tla-components-fine.json",
-        help="Output file for fine-grained features (default: data/processed/tla-components-fine.json)",
-    )
-    transform_manifest_parser.add_argument(
-        "--output-coarse",
-        default="data/processed/tla-components-coarse.json",
-        help="Output file for coarse-grained features (default: data/processed/tla-components-coarse.json)",
-    )
-
     args = parser.parse_args()
 
     # Default to discover if no command specified
@@ -533,10 +454,6 @@ def main_discover() -> int:
         return update_manifest_with_s3(args)
     elif args.command == "transform":
         return transform_extracted_files(args)
-    elif args.command == "transform-directory":
-        return transform_directory(args)
-    elif args.command == "transform-manifest":
-        return transform_manifest(args)
     else:
         parser.print_help()
         return 1
