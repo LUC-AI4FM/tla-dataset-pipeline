@@ -1185,17 +1185,17 @@ class TlaTransformer:
             for idx, fine_rec in enumerate(fine_out):
                 coarse_rec = coarse_out[idx] if idx < len(coarse_out) else {}
                 spec_name = fine_rec.get("Specification", f"spec_{idx:04d}")
-                
+
                 # Create subdirectory for this spec (using model name or ID)
                 spec_dir = output_dir / spec_name
                 spec_dir.mkdir(parents=True, exist_ok=True)
-                
+
                 # Combine fine and coarse data in a single JSON file
                 combined_record = {
                     **fine_rec,
                     **{f"coarse_{k}": v for k, v in coarse_rec.items() if k not in ["id", "Specification"]}
                 }
-                
+
                 spec_file = spec_dir / "data.json"
                 with open(spec_file, "w", encoding="utf-8") as f:
                     json.dump(combined_record, f, indent=2, ensure_ascii=False)
