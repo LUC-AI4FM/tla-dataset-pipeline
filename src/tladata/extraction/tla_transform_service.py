@@ -24,21 +24,25 @@ class TlaTransformationService:
         self,
         extraction_manifest: str,
         extracted_files_root: str,
-        output_fine: str,
-        output_coarse: str,
+        output_fine: str = "",
+        output_coarse: str = "",
+        output_individual_dir: str = "",
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """
         Transform extracted TLA+ files from local extraction manifest.
 
         This is the PRIMARY transformation method for the pipeline.
         It takes the extraction manifest (created after FileExtractor) and transforms
-        all extracted files into labeled feature datasets.
+        all extracted files into labeled feature datasets. Optionally creates individual
+        JSON files per spec (one per model).
 
         Args:
             extraction_manifest: Path to extraction_manifest.jsonl (created by generate_extraction_manifest)
             extracted_files_root: Root directory containing extracted files (e.g., data/raw)
-            output_fine: Output path for fine-grained features JSON
-            output_coarse: Output path for coarse-grained features JSON
+            output_fine: Optional output path for combined fine-grained features JSON
+            output_coarse: Optional output path for combined coarse-grained features JSON
+            output_individual_dir: Optional directory to write individual JSON files per spec.
+                Each spec gets its own subdirectory named by model name.
 
         Returns:
             Tuple of (fine_records, coarse_records)
@@ -48,8 +52,7 @@ class TlaTransformationService:
             service.transform_from_local_extraction(
                 extraction_manifest="manifests/extraction/extraction_manifest.jsonl",
                 extracted_files_root="data/raw",
-                output_fine="data/processed/tla-components-fine.json",
-                output_coarse="data/processed/tla-components-coarse.json"
+                output_individual_dir="data/processed/json"
             )
         """
         extracted_root = Path(extracted_files_root)
@@ -120,9 +123,9 @@ class TlaTransformationService:
         print(f"Transforming {len(specs)} specifications...")
         fine_out, coarse_out = self.transformer.transform(
             specs,
-            output_fine=output_fine,
-            output_coarse=output_coarse,
-            base_paths=[str(extracted_root)],
+            output_fine=output_fine if output_fine else None,
+            output_coarse=output_coarse if output_coarse else None,
+            output_individual_dir=output_individual_dir if output_individual_dir else None,
         )
 
         # Create transformation manifest linking specs to source repos
@@ -133,8 +136,12 @@ class TlaTransformationService:
         print(
             f"Transformation complete: {len(fine_out)} fine-grained, {len(coarse_out)} coarse-grained records"
         )
-        print(f"Fine-grained output:  {output_fine}")
-        print(f"Coarse-grained output: {output_coarse}")
+        if output_fine:
+            print(f"Fine-grained output:  {output_fine}")
+        if output_coarse:
+            print(f"Coarse-grained output: {output_coarse}")
+        if output_individual_dir:
+            print(f"Individual spec files: {output_individual_dir}")
 
         return fine_out, coarse_out
 
@@ -152,121 +159,3 @@ class TlaTransformationService:
                 }
                 f.write(json.dumps(manifest_record) + "\n")
         print(f"Transformation manifest: {output_path}")
-
-    # Legacy methods for backward compatibility
-    def transform_from_directory(
-        self,
-        tla_dir: str,
-        output_fine: str,
-        output_coarse: str,
-        recursive: bool = True,
-    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-        """
-        Transform all TLA+ files in a directory (legacy method).
-
-        DEPRECATED: Use transform_from_local_extraction() with extraction manifest instead.
-        This method is kept for backward compatibility.
-
-        Args:
-            tla_dir: Directory containing extracted TLA+ files
-            output_fine: Output path for fine-grained features JSON
-            output_coarse: Output path for coarse-grained features JSON
-            recursive: Whether to search recursively for .tla files
-
-        Returns:
-            Tuple of (fine_records, coarse_records)
-        """
-        tla_dir_path = Path(tla_dir)
-        if not tla_dir_path.exists():
-            raise ValueError(f"Directory not found: {tla_dir}")
-
-        # Find all TLA files
-        pattern = "**/*.tla" if recursive else "*.tla"
-        tla_files = list(tla_dir_path.glob(pattern))
-
-        if not tla_files:
-            print(f"Warning: No .tla files found in {tla_dir}")
-
-        print(f"Found {len(tla_files)} TLA+ files to process")
-
-        # Build spec entries from files
-        specs = []
-        for idx, tla_file in enumerate(tla_files):
-            spec_name = tla_file.stem
-            cfg_file = tla_file.with_suffix(".cfg")
-
-            spec = {
-                "model": str(spec_name),
-                "tla_clean": str(tla_file),
-                "tla_original": str(tla_file),
-                "cfg": str(cfg_file) if cfg_file.exists() else None,
-            }
-            specs.append(spec)
-
-        print(f"Processing {len(specs)} specifications...")
-        fine_out, coarse_out = self.transformer.transform(
-            specs,
-            output_fine=output_fine,
-            output_coarse=output_coarse,
-            base_paths=[str(tla_dir_path)],
-        )
-
-        print(
-            f"Transformation complete: {len(fine_out)} fine-grained, {len(coarse_out)} coarse-grained records"
-        )
-        print(f"Fine-grained output:  {output_fine}")
-        print(f"Coarse-grained output: {output_coarse}")
-
-        return fine_out, coarse_out
-
-    def transform_from_manifest(
-        self,
-        manifest_jsonl: str,
-        output_fine: str,
-        output_coarse: str,
-        base_paths: list[str] | None = None,
-    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-        """
-        Transform specs defined in a custom manifest (legacy method).
-
-        DEPRECATED: Use transform_from_local_extraction() instead.
-        This method is kept for backward compatibility.
-
-        Args:
-            manifest_jsonl: Path to JSONL file with spec entries
-            output_fine: Output path for fine-grained features JSON
-            output_coarse: Output path for coarse-grained features JSON
-            base_paths: Optional list of base paths for file search
-
-        Returns:
-            Tuple of (fine_records, coarse_records)
-        """
-        manifest_path = Path(manifest_jsonl)
-        if not manifest_path.exists():
-            raise ValueError(f"Manifest not found: {manifest_jsonl}")
-
-        # Load specs from manifest
-        specs = []
-        with open(manifest_jsonl) as f:
-            for line in f:
-                if line.strip():
-                    specs.append(json.loads(line))
-
-        print(f"Loaded {len(specs)} specifications from manifest: {manifest_jsonl}")
-
-        # Add base path if not provided
-        if not base_paths:
-            base_paths = [str(manifest_path.parent)]
-
-        print(f"Processing {len(specs)} specifications with base paths: {base_paths}")
-        fine_out, coarse_out = self.transformer.transform(
-            specs, output_fine=output_fine, output_coarse=output_coarse, base_paths=base_paths
-        )
-
-        print(
-            f"Transformation complete: {len(fine_out)} fine-grained, {len(coarse_out)} coarse-grained records"
-        )
-        print(f"Fine-grained output:  {output_fine}")
-        print(f"Coarse-grained output: {output_coarse}")
-
-        return fine_out, coarse_out

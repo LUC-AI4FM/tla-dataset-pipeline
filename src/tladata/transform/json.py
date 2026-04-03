@@ -10,7 +10,7 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 # Forward declaration of feature lists
 FINE_FEATURES: list[tuple[str, Callable]] = []
@@ -24,9 +24,9 @@ class TlaTransformerConfig:
 
     specs_data: list[dict[str, Any]]
     """List of spec dictionaries with 'model', 'tla_clean', 'tla_original', 'cfg' keys"""
-    output_fine: Optional[str] = None
+    output_fine: str | None = None
     """Output path for fine-grained features JSON (None = return dict instead)"""
-    output_coarse: Optional[str] = None
+    output_coarse: str | None = None
     """Output path for coarse-grained features JSON (None = return dict instead)"""
 
 
@@ -101,7 +101,7 @@ _SECTION_KW = re.compile(
 
 
 # walks data/ recursively and returns the first match — prefers /tla/ or /cfg/ subfolder
-def find_file(filename: str, base_paths: list[str] | None = None) -> Optional[str]:
+def find_file(filename: str, base_paths: list[str] | None = None) -> str | None:
     """Find a file in given base paths or current directory."""
     if not filename:
         return None
@@ -1099,14 +1099,17 @@ class TlaTransformer:
         specs: list[dict[str, Any]],
         output_fine: str | None = None,
         output_coarse: str | None = None,
+        output_individual_dir: str | None = None,
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """
         Transform specs and optionally write to JSON files.
 
         Args:
             specs: List of spec dictionaries with 'model', 'tla_clean', 'tla_original', 'cfg'
-            output_fine: Optional path to write fine-grained JSON
-            output_coarse: Optional path to write coarse-grained JSON
+            output_fine: Optional path to write combined fine-grained JSON
+            output_coarse: Optional path to write combined coarse-grained JSON
+            output_individual_dir: Optional directory to write individual JSON files per spec
+                (each in a subdirectory named after the spec/model)
 
         Returns:
             Tuple of (fine_records, coarse_records)
@@ -1153,7 +1156,7 @@ class TlaTransformer:
 
             # Group features into coarse buckets
             coarse_record = {"id": idx, "Specification": spec}
-            coarse_buckets = {k: [] for k in COARSE_KEYS}
+            coarse_buckets: dict[str, list[str]] = {k: [] for k in COARSE_KEYS}
             for key, _ in FINE_FEATURES:
                 val = fine_record[key]
                 cat = COARSE_MAP.get(key)
@@ -1176,10 +1179,31 @@ class TlaTransformer:
             with open(output_coarse, "w", encoding="utf-8") as f:
                 json.dump(coarse_out, f, indent=2, ensure_ascii=False)
 
+        # Write individual JSON files if specified
+        if output_individual_dir:
+            output_dir = Path(output_individual_dir)
+            for idx, fine_rec in enumerate(fine_out):
+                coarse_rec = coarse_out[idx] if idx < len(coarse_out) else {}
+                spec_name = fine_rec.get("Specification", f"spec_{idx:04d}")
+                
+                # Create subdirectory for this spec (using model name or ID)
+                spec_dir = output_dir / spec_name
+                spec_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Combine fine and coarse data in a single JSON file
+                combined_record = {
+                    **fine_rec,
+                    **{f"coarse_{k}": v for k, v in coarse_rec.items() if k not in ["id", "Specification"]}
+                }
+                
+                spec_file = spec_dir / "data.json"
+                with open(spec_file, "w", encoding="utf-8") as f:
+                    json.dump(combined_record, f, indent=2, ensure_ascii=False)
+
         if errors:
             print(f"Transformation completed with {len(errors)} warning(s):")
-            for e in errors:
-                print(e)
+            for err in errors:
+                print(err)
 
         return fine_out, coarse_out
 

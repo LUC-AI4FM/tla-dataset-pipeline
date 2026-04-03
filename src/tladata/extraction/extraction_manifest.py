@@ -27,8 +27,8 @@ def generate_extraction_manifest(
     if not root_path.exists():
         raise ValueError(f"Directory not found: {extracted_files_root}")
 
-    manifest_records = []
-    stats = {"total_repos": 0, "total_files": 0, "errors": []}
+    manifest_records: list[dict[str, Any]] = []
+    stats: dict[str, Any] = {"total_repos": 0, "total_files": 0, "errors": []}
 
     # repos are stored as <owner>/<name> directories
     for repo_dir in root_path.iterdir():
@@ -38,7 +38,7 @@ def generate_extraction_manifest(
         # Extract repo name from directory structure
         # e.g., if path is data/raw/tlaplus/tlaplus, repo = "tlaplus/tlaplus"
         # We need to reconstruct this from the directory name
-        parts = []
+        parts: list[str] = []
         current = repo_dir
         while current != root_path and current != root_path.parent:
             parts.insert(0, current.name)
