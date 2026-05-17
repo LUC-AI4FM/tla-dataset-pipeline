@@ -19,30 +19,35 @@ class PromptPipeline:
 
     def __init__(
         self,
-        output_dir: str,
-        model_spec: str = "gpt-4",
         api_key: str | None = None,
+        output_dir: str = "data/raw",
+        model_name: str = "gpt-4",
         prompt_loader: PromptLoader | None = None,
     ) -> None:
         """Initialize the prompt pipeline.
 
         Args:
-            output_dir: Directory for saving results
-            model_spec: Provider-qualified model string (default: gpt-4)
             api_key: API key for providers that require one
+            output_dir: Directory for saving results
+            model_name: Provider-qualified model string (default: gpt-4)
             prompt_loader: Optional PromptLoader for custom prompts
 
         Raises:
             ValueError: If output_dir is empty
         """
+        if not api_key:
+            self.logger.warning("API key not provided, prompts requiring authentication may fail. " \
+            "Unless you are using a provider that does not require an API key, please set the API key to avoid errors.")
         if not output_dir:
             raise ValueError("Output directory cannot be empty")
 
-        self.model_spec = model_spec
+        self.api_key = api_key
+        self.model_name = model_name
         self.result_writer = PromptResultWriter(output_dir)
         self.logger = get_logger(self.__class__.__name__)
 
-        self.orchestrator = PromptOrchestrator(model_spec, api_key, prompt_loader)
+        # Initialize orchestrator with optional custom prompt loader
+        self.orchestrator = PromptOrchestrator(api_key, model_name, prompt_loader)
 
     def run_full_pipeline(
         self,
