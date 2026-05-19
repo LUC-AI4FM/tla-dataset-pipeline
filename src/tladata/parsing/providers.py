@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain_anthropic import ChatAnthropic
-from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
-from langchain_ollama import ChatOllama
+from langchain_anthropic import ChatAnthropic  # type: ignore
+from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint  # type: ignore
+from langchain_ollama import ChatOllama  # type: ignore
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
@@ -25,7 +25,8 @@ def create_llm(model_name: str = "gpt-4", api_key: str | None = None, provider: 
 
 
 def _make_openai(model_name: str, api_key: str | None) -> Any:
-    return ChatOpenAI(model=model_name, api_key=SecretStr(api_key), temperature=0)
+    api_key_secret: SecretStr | None = SecretStr(api_key) if api_key is not None else None
+    return ChatOpenAI(model=model_name, api_key=api_key_secret, temperature=0)
 
 
 def _make_ollama(model_name: str) -> Any:
