@@ -1,25 +1,15 @@
+"""Handler for TLA+ prompt-based parsing operations."""
+
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from tladata.cli_handler import CLIHandler
+from tladata.logging import get_logger
 from tladata.parsing.pipeline import PromptPipeline
-from tladata.parsing.providers import _parse_spec
 
 if TYPE_CHECKING:
     import argparse
-
-
-def _resolve_api_key(model_spec: str) -> str | None:
-    provider, _ = _parse_spec(model_spec)
-    if provider == "openai":
-        return os.environ.get("OPENAI_API_KEY")
-    if provider == "anthropic":
-        return os.environ.get("ANTHROPIC_API_KEY")
-    if provider == "huggingface":
-        return os.environ.get("HF_TOKEN")
-    return None
-
 
 class ParsingHandler(CLIHandler):
     """Handle TLA+ prompt-based parsing operations.
@@ -31,6 +21,27 @@ class ParsingHandler(CLIHandler):
     def __init__(self) -> None:
         """Initialize the parsing handler."""
         super().__init__()
+        self.logger = get_logger(self.__class__.__name__)
+
+    def _get_api_key(self,args: "argparse.Namespace") -> str | None:
+        provider = getattr(args, "provider", "openai")
+        if provider == "openai":
+            if "OPENAI_API_KEY" not in os.environ:
+                self.logger.error("OPENAI_API_KEY environment variable is not set")
+                exit(1)
+            else:
+                return os.environ.get("OPENAI_API_KEY")
+        if provider == "anthropic":
+            if "ANTHROPIC_API_KEY" not in os.environ:
+                self.logger.error("ANTHROPIC_API_KEY environment variable is not set")
+                exit(1)
+            else:
+                return os.environ.get("ANTHROPIC_API_KEY")
+        if provider == "huggingface":
+            if "HF_TOKEN" not in os.environ:
+                self.logger.warning("HF_TOKEN environment variable is not set, using unauthenticated requests which may have limited access or rate limits.")
+            return os.environ.get("HF_TOKEN")
+        return None
 
     def handle(self, args: "argparse.Namespace") -> int:
         """Execute prompt-based parsing pipeline.
@@ -47,7 +58,7 @@ class ParsingHandler(CLIHandler):
         """
         try:
             model_spec = getattr(args, "model", "gpt-4")
-            api_key = _resolve_api_key(model_spec)
+            api_key = self._get_api_key(args)
 
             input_path = Path(args.input)
             if not input_path.exists():
@@ -56,7 +67,7 @@ class ParsingHandler(CLIHandler):
 
             pipeline = PromptPipeline(
                 output_dir=args.output,
-                model_spec=model_spec,
+                model_name=model_spec,
                 api_key=api_key,
             )
 

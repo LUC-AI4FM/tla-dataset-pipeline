@@ -2,17 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from langchain_anthropic import ChatAnthropic
+from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
+from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 
-def _parse_spec(model_spec: str) -> tuple[str, str]:
-    if ":" in model_spec:
-        provider, _, model = model_spec.partition(":")
-        return provider.lower().strip(), model.strip()
-    return "openai", model_spec.strip()
 
-
-def create_llm(model_spec: str, api_key: str | None = None) -> Any:
-    provider, model_name = _parse_spec(model_spec)
-
+def create_llm(model_name: str = "gpt-4", api_key: str | None = None, provider: str = "openai") -> Any:
     if provider == "openai":
         return _make_openai(model_name, api_key)
     if provider == "ollama":
@@ -28,47 +25,18 @@ def create_llm(model_spec: str, api_key: str | None = None) -> Any:
 
 
 def _make_openai(model_name: str, api_key: str | None) -> Any:
-    if not api_key:
-        raise ValueError("OpenAI requires OPENAI_API_KEY")
-    try:
-        from langchain_openai import ChatOpenAI
-        from pydantic import SecretStr
-    except ImportError as e:
-        raise ImportError("Install langchain-openai: pip install 'tladata[parsing]'") from e
-
-    return ChatOpenAI(api_key=SecretStr(api_key), model=model_name, temperature=0)
+    return ChatOpenAI(model=model_name, api_key=SecretStr(api_key), temperature=0)
 
 
 def _make_ollama(model_name: str) -> Any:
-    try:
-        from langchain_ollama import ChatOllama
-    except ImportError as e:
-        raise ImportError("Install langchain-ollama: pip install 'tladata[ollama]'") from e
-
     return ChatOllama(model=model_name, temperature=0)
 
 
 def _make_anthropic(model_name: str, api_key: str | None) -> Any:
-    if not api_key:
-        raise ValueError("Anthropic requires ANTHROPIC_API_KEY")
-    try:
-        from langchain_anthropic import ChatAnthropic
-    except ImportError as e:
-        raise ImportError("Install langchain-anthropic: pip install 'tladata[anthropic]'") from e
-
-    return ChatAnthropic(api_key=api_key, model=model_name, temperature=0)
+    return ChatAnthropic(model=model_name, api_key=api_key, temperature=0)
 
 
 def _make_huggingface(model_name: str, api_key: str | None) -> Any:
-    if not api_key:
-        raise ValueError("HuggingFace requires HF_TOKEN")
-    try:
-        from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
-    except ImportError as e:
-        raise ImportError(
-            "Install langchain-huggingface: pip install 'tladata[huggingface]'"
-        ) from e
-
     endpoint = HuggingFaceEndpoint(
         repo_id=model_name,
         huggingfacehub_api_token=api_key,
