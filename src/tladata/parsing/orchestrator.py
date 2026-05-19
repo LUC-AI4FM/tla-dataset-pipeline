@@ -22,8 +22,8 @@ class PromptOrchestrator:
 
     def __init__(
         self,
-        model_name: str = "gpt-4",
         api_key: Optional[str] = None,
+        model_name: str = "gpt-4",
         provider: str = "openai",
         prompt_loader: Optional[PromptLoader] = None,
     ) -> None:
@@ -35,8 +35,10 @@ class PromptOrchestrator:
             provider: Optional provider name (e.g., "openai", "ollama", "huggingface", "anthropic")
             prompt_loader: PromptLoader instance. If None, creates default loader.
         """
+
+        # Normalize empty-string API key to None for callers that pass ""
+        self.api_key = None if api_key == "" else api_key
         self.model_name = model_name
-        self.api_key = api_key
         self.provider = provider
         self._llm: Any | None = None
         self.prompt_loader = prompt_loader or PromptLoader()
@@ -45,7 +47,7 @@ class PromptOrchestrator:
     def _get_llm(self) -> Any:
         """Create the chat model lazily so the module can be imported without langchain."""
         if self._llm is None:
-            self._llm = create_llm(self.model_name, self.api_key, self.provider)
+            self._llm = create_llm(self.api_key, self.model_name,self.provider)
         return self._llm
 
     def run_stage(
