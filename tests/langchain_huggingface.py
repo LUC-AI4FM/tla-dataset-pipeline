@@ -1,6 +1,7 @@
 class HuggingFaceEndpoint:
-    def __init__(self, repo_id: str, huggingfacehub_api_token: str | None = None, temperature: float = 0):
+    def __init__(self, repo_id: str, model: str, huggingfacehub_api_token: str | None = None, temperature: float = 0):
         self.repo_id = repo_id
+        self.model = model
         self.huggingfacehub_api_token = huggingfacehub_api_token
         self.temperature = temperature
 

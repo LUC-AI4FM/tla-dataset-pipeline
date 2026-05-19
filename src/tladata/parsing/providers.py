@@ -34,13 +34,15 @@ def _make_ollama(model_name: str) -> Any:
 
 
 def _make_anthropic(api_key: str | None, model_name: str) -> Any:
-    return ChatAnthropic(api_key=api_key, model=model_name, temperature=0)
+    api_key_secret: SecretStr | None = SecretStr(api_key) if api_key is not None else None
+    return ChatAnthropic(api_key=api_key_secret, model_name=model_name, temperature=0)
 
 
 def _make_huggingface(api_key: str | None, model_name: str) -> Any:
     endpoint = HuggingFaceEndpoint(
         repo_id=model_name,
         huggingfacehub_api_token=api_key,
+        model=model_name,
         temperature=0,
     )
     return ChatHuggingFace(llm=endpoint)
