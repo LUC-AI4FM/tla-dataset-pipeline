@@ -1,5 +1,7 @@
 """Load runtime configuration limits from limits.yaml."""
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any, cast
 
@@ -9,10 +11,10 @@ import yaml
 class LimitsConfig:
     """Configuration manager for runtime limits."""
 
-    _instance: "LimitsConfig" | None = None
+    _instance: LimitsConfig | None = None
     _config: dict[str, Any] | None = None
 
-    def __new__(cls) -> "LimitsConfig":
+    def __new__(cls) -> LimitsConfig:
         """Singleton pattern to ensure only one config is loaded."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)

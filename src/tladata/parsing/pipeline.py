@@ -48,15 +48,16 @@ class PromptPipeline:
         if not output_dir:
             raise ValueError("Output directory cannot be empty")
 
-        self.api_key = api_key
+        # Normalize empty-string API key to None for callers that pass ""
+        self.api_key = None if api_key == "" else api_key
         self.model_name = model_name
         self.provider = provider
         self.result_writer = PromptResultWriter(output_dir)
 
         # Initialize orchestrator with optional custom prompt loader
         self.orchestrator = PromptOrchestrator(
-            model_name=self.model_name,
             api_key=self.api_key,
+            model_name=self.model_name,
             provider=self.provider,
             prompt_loader=prompt_loader,
         )

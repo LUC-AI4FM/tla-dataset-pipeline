@@ -215,9 +215,9 @@ class TestPromptOrchestrator:
         assert orchestrator.model_name == "gpt-4"
 
     def test_init_with_empty_key(self) -> None:
-        """Test that init fails with empty API key."""
-        with pytest.raises(ValueError, match="API key cannot be empty"):
-            PromptOrchestrator("")
+        """Test that init treats empty API key as not provided."""
+        orchestrator = PromptOrchestrator("")
+        assert orchestrator.api_key is None
 
     def test_init_with_custom_prompt_loader(self, api_key: str, temp_output_dir: str) -> None:
         """Test initialization with custom prompt loader."""
@@ -411,9 +411,9 @@ class TestPromptPipeline:
         assert pipeline.model_name == "gpt-4"
 
     def test_init_fails_with_empty_key(self, temp_output_dir: str) -> None:
-        """Test that init fails with empty API key."""
-        with pytest.raises(ValueError, match="API key cannot be empty"):
-            PromptPipeline("", temp_output_dir)
+        """Test that init treats empty API key as not provided."""
+        pipeline = PromptPipeline("", temp_output_dir)
+        assert pipeline.api_key is None
 
     def test_init_fails_with_empty_output_dir(self, api_key: str) -> None:
         """Test that init fails with empty output dir."""
