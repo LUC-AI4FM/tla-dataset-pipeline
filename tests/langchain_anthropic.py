@@ -1,6 +1,9 @@
+from pydantic import SecretStr
+
+
 class ChatAnthropic:
-    def __init__(self, model: str, api_key: str | None = None, temperature: float = 0):
-        self.model = model
+    def __init__(self, model_name: str, api_key: SecretStr | None = None, temperature: float = 0):
+        self.model_name = model_name
         self.api_key = api_key
         self.temperature = temperature
 
