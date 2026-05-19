@@ -24,7 +24,7 @@ class PromptOrchestrator:
         self,
         model_name: str = "gpt-4",
         api_key: Optional[str] = None,
-        provider: Optional[str] = "openai",
+        provider: str = "openai",
         prompt_loader: Optional[PromptLoader] = None,
     ) -> None:
         """Initialize the orchestrator.

@@ -37,9 +37,14 @@ class PromptPipeline:
         Raises:
             ValueError: If output_dir is empty
         """
+        # Initialize logger early so it can be used during init checks
+        self.logger = get_logger(self.__class__.__name__)
+
         if not api_key:
-            self.logger.warning("API key not provided, prompts requiring authentication may fail. " \
-            "Unless you are using a provider that does not require an API key, please set the API key to avoid errors.")
+            self.logger.warning(
+                "API key not provided, prompts requiring authentication may fail. "
+                "Unless you are using a provider that does not require an API key, please set the API key to avoid errors."
+            )
         if not output_dir:
             raise ValueError("Output directory cannot be empty")
 
@@ -47,10 +52,14 @@ class PromptPipeline:
         self.model_name = model_name
         self.provider = provider
         self.result_writer = PromptResultWriter(output_dir)
-        self.logger = get_logger(self.__class__.__name__)
 
         # Initialize orchestrator with optional custom prompt loader
-        self.orchestrator = PromptOrchestrator(api_key, model_name, provider, prompt_loader)
+        self.orchestrator = PromptOrchestrator(
+            model_name=self.model_name,
+            api_key=self.api_key,
+            provider=self.provider,
+            prompt_loader=prompt_loader,
+        )
 
     def run_full_pipeline(
         self,
