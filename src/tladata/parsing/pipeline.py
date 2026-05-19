@@ -22,6 +22,7 @@ class PromptPipeline:
         api_key: str | None = None,
         output_dir: str = "data/raw",
         model_name: str = "gpt-4",
+        provider: str = "openai",
         prompt_loader: PromptLoader | None = None,
     ) -> None:
         """Initialize the prompt pipeline.
@@ -30,6 +31,7 @@ class PromptPipeline:
             api_key: API key for providers that require one
             output_dir: Directory for saving results
             model_name: Provider-qualified model string (default: gpt-4)
+            provider: Provider name (e.g., "openai", "ollama", "huggingface", "anthropic")
             prompt_loader: Optional PromptLoader for custom prompts
 
         Raises:
@@ -43,11 +45,12 @@ class PromptPipeline:
 
         self.api_key = api_key
         self.model_name = model_name
+        self.provider = provider
         self.result_writer = PromptResultWriter(output_dir)
         self.logger = get_logger(self.__class__.__name__)
 
         # Initialize orchestrator with optional custom prompt loader
-        self.orchestrator = PromptOrchestrator(api_key, model_name, prompt_loader)
+        self.orchestrator = PromptOrchestrator(api_key, model_name, provider, prompt_loader)
 
     def run_full_pipeline(
         self,
