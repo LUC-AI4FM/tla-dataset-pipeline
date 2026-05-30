@@ -43,6 +43,26 @@ class ParsingHandler(CLIHandler):
             return os.environ.get("HF_TOKEN")
         return None
 
+    def _sanitize_model_name(self, model_spec: str) -> str:
+        """Sanitize model name for use as a directory name.
+        Converts model specs like:
+        - "openai:gpt-4o" -> "openai-gpt-4o"
+        - "huggingface:mistralai/Mistral-7B" -> "huggingface-mistralai_Mistral-7B"
+
+        Args:
+            model_spec: Model specification string
+
+        Returns:
+            Sanitized directory name
+        """
+        # Replace colons with hyphens (for provider:model format)
+        sanitized = model_spec.replace(":", "-")
+        # Replace forward slashes with underscores (for paths like mistralai/Mistral)
+        sanitized = sanitized.replace("/", "_")
+        # Replace any other problematic characters with underscores
+        sanitized = "".join(c if c.isalnum() or c in "-_" else "_" for c in sanitized)
+        return sanitized
+
     def handle(self, args: "argparse.Namespace") -> int:
         """Execute prompt-based parsing pipeline.
 
@@ -65,8 +85,14 @@ class ParsingHandler(CLIHandler):
                 self.logger.error(f"Input path does not exist: {args.input}")
                 return 1
 
+            # Construct output directory with model name
+            model_name_clean = self._sanitize_model_name(model_spec)
+            output_dir = Path(args.output) / model_name_clean
+
+            self.logger.info(f"Using output directory: {output_dir}")
+
             pipeline = PromptPipeline(
-                output_dir=args.output,
+                output_dir=str(output_dir),
                 model_name=model_spec,
                 api_key=api_key,
             )

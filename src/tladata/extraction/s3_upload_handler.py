@@ -25,11 +25,28 @@ class S3UploadHandler(CLIHandler):
         super().__init__()
         self.config = config
 
+    def _sanitize_model_name(self, model_spec: str) -> str:
+        """Sanitize model name for use in S3 prefix.
+
+        Args:
+            model_spec: Model specification string
+
+        Returns:
+            Sanitized model name
+        """
+        # Replace colons with hyphens (for provider:model format)
+        sanitized = model_spec.replace(":", "-")
+        # Replace forward slashes with underscores (for paths like mistralai/Mistral)
+        sanitized = sanitized.replace("/", "_")
+        # Replace any other problematic characters with underscores
+        sanitized = "".join(c if c.isalnum() or c in "-_" else "_" for c in sanitized)
+        return sanitized
+
     def handle(self, args: "argparse.Namespace") -> int:
         """Upload extracted files to S3 with manifest files.
 
         Args:
-            args: Arguments with input, bucket, prefix, region, dry_run, etc.
+            args: Arguments with input, bucket, prefix, region, model, dry_run, etc.
 
         Returns:
             Exit code (0 for success, 1 for failure)
@@ -57,6 +74,13 @@ class S3UploadHandler(CLIHandler):
                 raise ValueError(
                     "Bucket not specified. Use --bucket, S3_BUCKET env var, or configure in .dvc/config"
                 )
+
+            # If model is specified, append it to the prefix for parsed data
+            model_name = getattr(args, "model", None)
+            if model_name:
+                model_name_clean = self._sanitize_model_name(model_name)
+                prefix = f"{prefix}/{model_name_clean}".lstrip("/")
+                self.logger.info(f"Using model-based S3 prefix: {prefix}")
 
             uploader = S3Uploader(cast(str, bucket), cast(str, prefix), cast(str, region))
 
