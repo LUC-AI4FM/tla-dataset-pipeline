@@ -1,0 +1,298 @@
+name: Run Full Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      discovery_command:
+        description: 'Discovery command: discover, fetch-seeds, or search'
+        required: false
+        default: 'discover'
+        type: choice
+        options:
+          - discover
+          - fetch-seeds
+          - search
+      run_extraction:
+        description: 'Run extraction after discovery'
+        required: false
+        default: true
+        type: boolean
+      run_parsing:
+        description: 'Run parsing after extraction'
+        required: false
+        default: false
+        type: boolean
+      parsing_model:
+        description: 'LLM model for parsing (if enabled)'
+        required: false
+        default: 'gpt-4'
+        type: string
+      parsing_version:
+        description: 'TLA+ parsing pipeline version (1, 2, or 3)'
+        required: false
+        default: '3'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+      aws_region:
+        description: 'AWS region for S3 operations'
+        required: false
+        default: 'us-east-2'
+        type: string
+      run_s3_upload:
+        description: 'Upload to S3 at end'
+        required: false
+        default: false
+        type: boolean
+      s3_bucket:
+        description: 'S3 bucket name (if uploading)'
+        required: false
+        type: string
+      s3_prefix:
+        description: 'S3 prefix for uploads'
+        required: false
+        default: 'raw'
+        type: string
+      commit_results:
+        description: 'Commit results back to repository'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  full-pipeline:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install all dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[config,s3,parsing]"
+
+      - name: Log pipeline configuration
+        run: |
+          cat > pipeline-config.txt << EOF
+          Full Pipeline Configuration:
+          Discovery Command: ${{ inputs.discovery_command }}
+          Run Extraction: ${{ inputs.run_extraction }}
+          Run Parsing: ${{ inputs.run_parsing }}
+          Parsing Model: ${{ inputs.parsing_model }}
+          Parsing Version: ${{ inputs.parsing_version }}
+          AWS Region: ${{ inputs.aws_region }}
+          Run S3 Upload: ${{ inputs.run_s3_upload }}
+          S3 Bucket: ${{ inputs.s3_bucket }}
+          S3 Prefix: ${{ inputs.s3_prefix }}
+          Commit Results: ${{ inputs.commit_results }}
+          Start Time: $(date)
+          EOF
+          
+          cat pipeline-config.txt
+
+      - name: Configure GitHub token
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "ERROR: GITHUB_TOKEN secret not configured"
+            exit 1
+          fi
+          echo "GitHub token configured"
+
+      - name: Step 1 - Run Discovery
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Starting Discovery..."
+          
+          # Validate discovery command
+          discovery_cmd="${{ inputs.discovery_command }}"
+          if [[ ! "$discovery_cmd" =~ ^(discover|fetch-seeds|search)$ ]]; then
+            echo "ERROR: Invalid discovery command: $discovery_cmd"
+            echo "Valid options: discover, fetch-seeds, search"
+            exit 1
+          fi
+          
+          tladata "$discovery_cmd"
+          
+          if [ -f manifests/sources/sources_latest.jsonl ]; then
+            line_count=$(wc -l < manifests/sources/sources_latest.jsonl)
+            if [ "$line_count" -eq 0 ]; then
+              echo "WARNING: Discovery found 0 repositories. Proceeding with empty manifest."
+            else
+              echo "Discovery complete. Found $line_count repositories."
+            fi
+          else
+            echo "ERROR: Discovery failed - no manifest created"
+            exit 1
+          fi
+
+      - name: Step 2 - Run Extraction
+        if: inputs.run_extraction && success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Starting Extraction..."
+          mkdir -p data/raw
+          
+          tladata pull \
+            --manifest manifests/sources/sources_latest.jsonl \
+            --output data/raw
+          
+          if [ -d data/raw ]; then
+            file_count=$(find data/raw -type f | wc -l)
+            if [ "$file_count" -eq 0 ]; then
+              echo "WARNING: Extraction complete but found 0 files"
+            else
+              echo "Extraction complete. Extracted $file_count files."
+            fi
+          else
+            echo "ERROR: Extraction directory not created"
+            exit 1
+          fi
+
+      - name: Step 3 - Run Parsing
+        if: inputs.run_parsing && inputs.run_extraction && success()
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          echo "Starting Parsing..."
+          
+          # Validate that extraction produced files
+          file_count=$(find data/raw -type f 2>/dev/null | wc -l)
+          if [ "$file_count" -eq 0 ]; then
+            echo "ERROR: No extracted files found in data/raw. Cannot proceed with parsing."
+            exit 1
+          fi
+          echo "Found $file_count files to parse"
+          
+          mkdir -p data/parsed
+          
+          tladata parse data/raw \
+            --output data/parsed \
+            --model "${{ inputs.parsing_model }}" \
+            --version ${{ inputs.parsing_version }}
+          
+          if [ -d data/parsed ]; then
+            result_count=$(find data/parsed -type f | wc -l)
+            echo "Parsing complete. Generated $result_count results."
+          else
+            echo "WARNING: No parsing results generated"
+          fi
+
+      - name: Step 4 - Upload to S3
+        if: inputs.run_s3_upload && inputs.run_extraction && success()
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Step 5 - Execute S3 Upload
+        if: inputs.run_s3_upload && inputs.run_extraction && success()
+        run: |
+          echo "Starting S3 Upload"
+          
+          # Validate files exist before upload
+          file_count=$(find data/raw -type f 2>/dev/null | wc -l)
+          if [ "$file_count" -eq 0 ]; then
+            echo "ERROR: No files to upload in data/raw. Cannot proceed with S3 upload."
+            exit 1
+          fi
+          echo "Found $file_count files to upload"
+          
+          # Verify AWS credentials are configured
+          if ! aws sts get-caller-identity &> /dev/null; then
+            echo "ERROR: AWS credentials not properly configured"
+            exit 1
+          fi
+          
+          bucket="${{ inputs.s3_bucket }}"
+
+          if [ -z "$bucket" ]; then
+            bucket="${{ vars.S3_BUCKET }}"
+          fi
+          
+          if [ -z "$bucket" ]; then
+            bucket=$(grep -A1 "'remote \"s3remote\"'" .dvc/config 2>/dev/null | grep "url" | sed "s/.*s3:\/\/\([^/]*\).*/\1/" || echo "")
+          fi
+          
+          if [ -z "$bucket" ]; then
+            echo "ERROR: S3 bucket not specified"
+            exit 1
+          fi
+          
+          tladata push-to-s3 \
+            --input data/raw \
+            --bucket "$bucket" \
+            --prefix "${{ inputs.s3_prefix }}" \
+            --region ${{ inputs.aws_region }}
+          
+          echo "Upload complete. Data available at s3://$bucket/${{ inputs.s3_prefix }}/"
+
+      - name: Step 6 - Commit Results
+        if: inputs.commit_results && always()
+        run: |
+          echo "Committing Results..."
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          # Stage all changes
+          git add . || true
+          
+          # Create commit message
+          commit_msg="chore: pipeline run - ${{ inputs.discovery_command }}"
+          [ "${{ inputs.run_extraction }}" = "true" ] && commit_msg="$commit_msg + extraction"
+          [ "${{ inputs.run_parsing }}" = "true" ] && commit_msg="$commit_msg + parsing"
+          [ "${{ inputs.run_s3_upload }}" = "true" ] && commit_msg="$commit_msg + s3-upload"
+          
+          git commit -m "$commit_msg" || echo "No changes to commit"
+          git push origin HEAD:${{ github.ref_name }} || echo "Nothing to push"
+
+      - name: Step 7 - Generate Final Report
+        if: always()
+        run: |
+          cat >> pipeline-config.txt << EOF
+          
+          Pipeline Execution Summary:
+          Discovery Status: Complete
+          Extraction Status: ${{ inputs.run_extraction }}
+          Parsing Status: ${{ inputs.run_parsing }}
+          S3 Upload Status: ${{ inputs.run_s3_upload }}
+          Commit Status: ${{ inputs.commit_results }}
+          End Time: $(date)
+          
+          Output Directories:
+          EOF
+          
+          [ -f manifests/sources/sources_latest.jsonl ] && echo "✓ Manifest: manifests/sources/sources_latest.jsonl" >> pipeline-config.txt || echo "✗ Manifest: not found" >> pipeline-config.txt
+          [ -d data/raw ] && echo "✓ Extracted files: data/raw ($(find data/raw -type f | wc -l) files)" >> pipeline-config.txt || echo "✗ Extracted files: not found" >> pipeline-config.txt
+          [ -d data/parsed ] && echo "✓ Parsed results: data/parsed ($(find data/parsed -type f | wc -l) results)" >> pipeline-config.txt || echo "✗ Parsed results: not found" >> pipeline-config.txt
+          
+          cat pipeline-config.txt
+
+      - name: Step 8 - Upload Final Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-pipeline-report
+          path: pipeline-config.txt
+          retention-days: 30
