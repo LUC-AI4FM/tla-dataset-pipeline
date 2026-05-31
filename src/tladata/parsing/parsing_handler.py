@@ -23,24 +23,29 @@ class ParsingHandler(CLIHandler):
         super().__init__()
         self.logger = get_logger(self.__class__.__name__)
 
-    def _get_api_key(self,args: "argparse.Namespace") -> str | None:
-        provider = getattr(args, "provider", "openai")
+    def _get_api_key(self, provider: str) -> str | None:
+        provider = provider.lower()
         if provider == "openai":
-            if "OPENAI_API_KEY" not in os.environ:
+            token = os.environ.get("OPENAI_API_KEY")
+            if not token:
                 self.logger.error("OPENAI_API_KEY environment variable is not set")
                 exit(1)
-            else:
-                return os.environ.get("OPENAI_API_KEY")
+            return token
         if provider == "anthropic":
-            if "ANTHROPIC_API_KEY" not in os.environ:
+            token = os.environ.get("ANTHROPIC_API_KEY")
+            if not token:
                 self.logger.error("ANTHROPIC_API_KEY environment variable is not set")
                 exit(1)
-            else:
-                return os.environ.get("ANTHROPIC_API_KEY")
+            return token
         if provider == "huggingface":
-            if "HF_TOKEN" not in os.environ:
-                self.logger.warning("HF_TOKEN environment variable is not set, using unauthenticated requests which may have limited access or rate limits.")
-            return os.environ.get("HF_TOKEN")
+            token = os.environ.get("HF_TOKEN")
+            if not token:
+                self.logger.warning(
+                    "HF_TOKEN not set; using unauthenticated requests which may have limited access or rate limits."
+                )
+            return token
+        if provider == "ollama":
+            return None
         return None
 
     def _sanitize_model_name(self, model_spec: str) -> str:
@@ -78,7 +83,10 @@ class ParsingHandler(CLIHandler):
         """
         try:
             model_spec = getattr(args, "model", "gpt-4")
-            api_key = self._get_api_key(args)
+            provider = getattr(args, "provider", None)
+            if not provider:
+                provider = model_spec.split(":", 1)[0] if ":" in model_spec else "openai"
+            api_key = self._get_api_key(provider)
 
             input_path = Path(args.input)
             if not input_path.exists():
@@ -94,6 +102,7 @@ class ParsingHandler(CLIHandler):
             pipeline = PromptPipeline(
                 output_dir=str(output_dir),
                 model_name=model_spec,
+                provider=provider,
                 api_key=api_key,
             )
 
