@@ -84,8 +84,14 @@ class ParsingHandler(CLIHandler):
         try:
             model_spec = getattr(args, "model", "gpt-4")
             provider = getattr(args, "provider", None)
+            model_name = model_spec
+            if ":" in model_spec:
+                spec_provider, spec_model = model_spec.split(":", 1)
+                if not provider:
+                    provider = spec_provider
+                model_name = spec_model
             if not provider:
-                provider = model_spec.split(":", 1)[0] if ":" in model_spec else "openai"
+                provider = "openai"
             api_key = self._get_api_key(provider)
 
             input_path = Path(args.input)
@@ -101,7 +107,7 @@ class ParsingHandler(CLIHandler):
 
             pipeline = PromptPipeline(
                 output_dir=str(output_dir),
-                model_name=model_spec,
+                model_name=model_name,
                 provider=provider,
                 api_key=api_key,
             )
