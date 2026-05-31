@@ -1,5 +1,7 @@
 """Upload files to AWS S3."""
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import TYPE_CHECKING
 
