@@ -2,6 +2,7 @@
 
 ![Lint and Format](https://github.com/LUC-FMitF/tla-dataset-pipeline/actions/workflows/ci.yaml/badge.svg)
 ![Nightly Discovery](https://github.com/LUC-FMitF/tla-dataset-pipeline/actions/workflows/nightly_discovery.yaml/badge.svg)
+![CI Pipeline](https://github.com/LUC-FMitF/tla-dataset-pipeline/actions/workflows/run-full-pipeline.yaml/badge.svg)
 
 ## Overview
 
@@ -240,6 +241,101 @@ Local: data/raw/
 AWS S3: s3://my-bucket/raw/
   kubernetes/scheduler/
     lock.tla
+```
+
+## GitHub Workflows (CI/CD)
+
+Run the full pipeline on GitHub with a single click. Perfect for automated experiments without local setup.
+
+**→ See [docs/WORKFLOWS.md](docs/WORKFLOWS.md) for detailed documentation and troubleshooting.**
+
+### One-time Setup
+
+Set these in repository **Settings > Secrets and variables > Actions**:
+
+**Required:**
+
+- `AWS_ACCESS_KEY_ID` - For S3 uploads
+- `AWS_SECRET_ACCESS_KEY` - For S3 uploads
+
+**Optional (for parsing):**
+
+- `OPENAI_API_KEY` - For GPT models (gpt-4, gpt-4o)
+- `ANTHROPIC_API_KEY` - For Claude models
+- `HUGGINGFACE_API_KEY` - For HuggingFace models
+
+And set in **Settings > Secrets and variables > Variables**:
+
+- `S3_BUCKET` - Your S3 bucket name
+
+### Running the Pipeline
+
+1. Go to **Actions** tab in your repository
+2. Click **Run Full Pipeline** workflow
+3. Click **Run workflow** button
+4. Configure your experiment:
+
+```yaml
+Discovery:
+  - Command: discover (default) | fetch-seeds | search
+
+Extraction:
+  - Enabled: true (default)
+  - Manifest: manifests/sources/sources_latest.jsonl
+  - Output: data/raw
+
+Parsing (optional):
+  - Enabled: false (default)
+  - Model: gpt-4 (or gpt-4o, ollama:llama3, etc.)
+  - Version: 3
+
+Upload to S3 (optional):
+  - Enabled: false (default)
+  - Bucket: (auto-detected from .dvc/config or specify)
+  - Prefix: raw
+
+Results:
+  - Commit: true (default, saves to repo)
+```
+
+5. Click **Run workflow** to start
+
+### Monitoring
+
+- **Real-time logs**: Expand each step to see output
+- **Results**: Check "Code" tab if committed to repo
+- **Artifacts**: Download via workflow summary (7-day retention)
+
+### Common Configurations
+
+**Quick discovery + extraction:**
+
+```text
+discovery: search
+extraction: true
+parsing: false
+upload: false
+commit: true
+```
+
+**Full pipeline with parsing:**
+
+```text
+discovery: search
+extraction: true
+parsing: true (model: gpt-4o)
+upload: false
+commit: true
+```
+
+**Full pipeline to S3:**
+
+```text
+discovery: discover
+extraction: true
+parsing: true (model: ollama:llama3)
+upload: true
+commit: true
 ```
 
 ## Troubleshooting
