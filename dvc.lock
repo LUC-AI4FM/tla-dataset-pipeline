@@ -13,35 +13,35 @@ stages:
       size: 493
     - path: src/tladata/discovery
       hash: md5
-      md5: c2212fc7c06f03969d7b0e4028352c82.dir
+      md5: a7a68fdd4b19ca9c26181e9114510730.dir
       size: 41072
       nfiles: 12
     outs:
     - path: manifests/sources/sources_latest.jsonl
       hash: md5
-      md5: ce0fe22d735dd0c23e316c5c420be289
+      md5: f7b979d305e2cd949cd22bb683a74d2d
       size: 5331
     - path: manifests/sources/sources_latest_formatted.jsonl
       hash: md5
-      md5: 4978842e976110292972e62bb55284ab
+      md5: 54b07058239fd0143e5ad928be473b6d
       size: 6226
   pull:
     cmd: tladata pull
     deps:
     - path: manifests/sources/sources_latest.jsonl
       hash: md5
-      md5: ce0fe22d735dd0c23e316c5c420be289
+      md5: f7b979d305e2cd949cd22bb683a74d2d
       size: 5331
     - path: src/tladata/extraction
       hash: md5
-      md5: 55bd57fae5e100dc7e35cbc1c3b1f701.dir
+      md5: 164fe418568f71dd9c3eb97eec371fad.dir
       size: 50599
       nfiles: 11
     outs:
     - path: data/raw
       hash: md5
-      md5: f32f59fe9f9c63827dcaf55403beee7f.dir
-      size: 12148415
+      md5: ef4ba6dca7dd1cc1a6bc131660b4d07f.dir
+      size: 12148634
       nfiles: 2661
   parse:
     cmd: tladata parse data/raw --output data/parsed --version 3
